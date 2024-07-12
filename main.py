@@ -9,7 +9,6 @@ import plot_advanced_swv
 
 def main():
     #Faire la SWV(+Reverse SWV)
-    print("hi")
     plot_advanced_swv.SWV_Console()
     
 
