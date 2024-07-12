@@ -1,5 +1,5 @@
 """
-File: main.py
+File: utils.py
 Author: BioSensUM 
 Description: Ce fichier contient plusieurs fonctions qui seront utilisées dans le fichier main.py pour analyser les données.
 """
