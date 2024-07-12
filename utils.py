@@ -6,6 +6,7 @@ Description: Ce fichier contient plusieurs fonctions qui seront utilisées dans 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal import find_peaks
 
 def read_units_from_csv(csv_file):
     """
@@ -18,7 +19,6 @@ def read_units_from_csv(csv_file):
     - dict : Dictionnaire contenant les unités extraites pour chaque colonne.
     """
     try:
-        # Read the CSV to extract units
         unit_row = pd.read_csv(csv_file,  skiprows=5, nrows=1, header=None, encoding='utf-16').iloc[0]
         units = {}
         units['Potential'] = unit_row[0].split(':')[-1].strip()
@@ -113,12 +113,12 @@ def plot_current_vs_potential_with_units(df, units):
         print("Erreur : Le DataFrame ne contient pas les colonnes 'Potential' et 'Current'.")
         return
 
-    # Tracé de 'Courant' par rapport à 'Potentiel' avec les unités spécifiées
+    # Plot de 'Courant' par rapport à 'Potentiel' avec les unités spécifiées
     plt.figure(figsize=(10, 6))  # Ajuster la taille de la figure si nécessaire
     plt.plot(df['Potential'], df['Current'], marker='o', linestyle='-', color='b', label='Courant vs Potentiel')
-    plt.xlabel(f'Potentiel ({units["Potential"]})')  # Mise à jour de l'étiquette de l'axe x avec les unités appropriées
-    plt.ylabel(f'Courant ({units["Current"]})')      # Mise à jour de l'étiquette de l'axe y avec les unités appropriées
-    plt.title('Tracé Courant vs Potentiel')          # Mise à jour du titre du tracé
+    plt.xlabel(f'Potentiel ({units["Potential"]})') 
+    plt.ylabel(f'Courant ({units["Current"]})')      
+    plt.title('Tracé Courant vs Potentiel')       
     plt.legend()
     plt.grid(True)
     plt.show()
