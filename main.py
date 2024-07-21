@@ -9,7 +9,7 @@ import utils
 import plot_advanced_swv
 
 #Nom du csv(à changer pour output.txt)
-csv_name = "SWV-Grid_Search-100-Hz-10-mV-1.csv"
+csv_name = "SWV-Grid-Search-10-Hz-10-mV-1.csv"
 
 def main():
     #Faire la SWV(+Reverse SWV) avec comme resultat un output.csv
@@ -21,8 +21,10 @@ def main():
     cleaned_df = utils.clean_data(df)
     smoothed_df = utils.smooth_data(cleaned_df)
 
-    #Affichage des données
+    #Affichage des données  
     utils.plot_current_vs_potential_with_units(smoothed_df, units)
+
+    
 
 if __name__ == '__main__':
     main()
