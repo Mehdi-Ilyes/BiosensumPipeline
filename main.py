@@ -18,12 +18,13 @@ def main():
     #Recuperer les data et clean-up
     df = utils.read_current_from_csv(csv_name)
     units = utils.read_units_from_csv(csv_name)
+    print(units)
     cleaned_df = utils.clean_data(df)
     smoothed_df = utils.smooth_data(cleaned_df)
 
     #Affichage des données  
-    utils.plot_current_vs_potential_with_units(smoothed_df, units)
-
+    min, maxima = utils.plot_current_vs_potential_with_units(smoothed_df, units)
+    print("The difference is ", utils.calculate_current_difference(smoothed_df, min, maxima[0], maxima[1])," ", units['Current'])
     
 
 if __name__ == '__main__':

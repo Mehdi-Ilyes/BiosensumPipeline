@@ -7,6 +7,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks, savgol_filter
+import time
+import threading
+
 
 def read_units_from_csv(csv_file):
     """
@@ -164,22 +167,132 @@ def find_extreme_peaks(df, column='Current', prominence=0.1, m=1):
     - List of indices where local peaks are found.
     """
     try:
-        while filter_peak_by_prominence(df, column, prominence, m) == []:
+        iterations = 0
+        while (len(filter_peak_by_prominence(df, column, prominence, m)) == 0) or ( (len(filter_peak_by_prominence(df, column, prominence, m))==1) and m != 1):
+            iterations += 1
+            if iterations == 15: raise Exception
             prominence /= 2
     
-        print(prominence)
         return filter_peak_by_prominence(df, column, prominence, m)
     
     except Exception as e:
         print(f"An error occurred: {e}")
         return []
-    
 
+def most_relevant_minimum(df, minima, potential_column='Potential', target_value=-0.3):
+    """
+    Finds the minimum potential closest to the target value.
+
+    Parameters:
+    - df (pd.DataFrame): Input DataFrame containing the data.
+    - minima (list): List of indices of the identified minima.
+    - potential_column (str): The column name for potential values.
+    - target_value (float): The target potential value to find the closest minimum.
+
+    Returns:
+    - The index of the minimum potential closest to the target value.
+    """
+    closest_index = None
+    smallest_diff = float('inf')
+
+    for idx in minima:
+        potential = df.iloc[idx][potential_column]
+        diff = abs(potential - target_value)
+        if diff < smallest_diff:
+            smallest_diff = diff
+            closest_index = idx
+
+    return closest_index
+
+def find_nearest_maxima(maxima, min_index):
+    """
+    Finds the nearest maxima indices before and after a given minimum index.
+
+    Parameters:
+    - df (pd.DataFrame): Input DataFrame containing the data.
+    - maxima (list): List of indices of the identified maxima.
+    - min_index (int): The index of the minimum around which to find the nearest maxima.
+    - potential_column (str): The column name for potential values.
+
+    Returns:
+    - Tuple of indices: (index_of_max_before, index_of_max_after)
+    """
+    # Sort maxima to ensure they are in order
+    maxima = sorted(maxima)
+
+    # Initialize variables
+    max_before = None
+    max_after = None
+
+    # Find the nearest maxima before and after the minimum index
+    for max_index in maxima:
+        if max_index < min_index:
+            max_before = max_index
+        elif max_index > min_index:
+            if max_after is None:
+                max_after = max_index
+            break
+
+    return [max_before, max_after]
+
+def calculate_current_difference(df, min_index, max_index1, max_index2):
+    """
+    Calculate the difference between the current at the minimum and the projected current at the same potential
+    using the line connecting two maxima.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing 'Potential' and 'Current' columns.
+    - min_index (int): Index of the minimum in the DataFrame.
+    - max_index1, max_index2 (int): Indices of the two maxima in the DataFrame.
+
+    Returns:
+    - difference (float): The difference between the original current at the minimum and the projected current.
+    """
+    # Extract potentials and currents
+    df = df.dropna()
+
+    potential = df['Potential'].to_numpy()
+    current = df['Current'].to_numpy()
+
+    # Get coordinates of minima and maxima
+    min_potential = potential[min_index]
+    min_current = current[min_index]
+
+    max1_potential = potential[max_index1]
+    max1_current = current[max_index1]
+    max2_potential = potential[max_index2]
+    max2_current = current[max_index2]
+
+    # Calculate the slope (m) and intercept (c) of the line connecting the two maxima
+    m = (max2_current - max1_current) / (max2_potential - max1_potential)
+    c = max1_current - m * max1_potential
+
+    # Calculate the projected current at the potential of the minimum
+    projected_current = m * min_potential + c
+
+    # Calculate the difference between the original current at the minimum and the projected current
+    difference = min_current - projected_current
+
+    return difference
+
+
+
+def close_plot_after_delay(delay):
+    """
+    Closes the plot after a specified delay.
+
+    Parameters:
+    - delay (int): Time in seconds to wait before closing the plot.
+    """
+    # Timer to close the plot
+    timer = threading.Timer(delay, plt.close)
+    timer.start()
 
 def plot_current_vs_potential_with_units(df, units):
     """
     Trace 'Current' par rapport à 'Potentiel' à partir du DataFrame avec les unités spécifiées.
-
+    Récupère et affiche les maximums et minimums
+    
     Paramètres :
     - df (pd.DataFrame) : DataFrame d'entrée contenant les colonnes 'Potentiel' et 'Courant'.
     - units (dict) : Dictionnaire contenant les unités pour chaque colonne ('Potential' et 'Current').
@@ -190,16 +303,26 @@ def plot_current_vs_potential_with_units(df, units):
         print("Erreur : Le DataFrame ne contient pas les colonnes 'Potential' et 'Current'.")
         return
 
+    potential = df['Potential'].to_numpy()
+    current = df['Current'].to_numpy()
+
     # Plot de 'Courant' par rapport à 'Potentiel' avec les unités spécifiées
     plt.figure(figsize=(10, 6))  # Ajuster la taille de la figure si nécessaire
-    plt.plot(df['Potential'], df['Current'], marker='o', linestyle='-', color='b', label='Courant vs Potentiel')
+    plt.plot(potential, current, marker='o', linestyle='-', color='b', label='Courant vs Potentiel')
     
     # Peaks
     min = find_extreme_peaks(df, 'Current', 0.1, 1)
-    max =  find_extreme_peaks(df, 'Current', 0.1, 0)
-    
-    plt.plot(df['Potential'][max], df['Current'][max], 'ro', label='Maximum')
-    plt.plot(df['Potential'][min], df['Current'][min], 'go', label='Minimum')
+    max = find_extreme_peaks(df, 'Current', 0.1, 0)
+
+    minima = most_relevant_minimum(df, min)
+    maxima = find_nearest_maxima(max, minima)
+
+    plt.plot(potential[maxima], current[maxima], 'ro', label='Maximum')
+    plt.plot(potential[minima], current[minima], 'go', label='Minimum')
+
+    # Vérification que les indices sont valides avant de tracer les lignes
+    if maxima[0] is not None and maxima[1] is not None:
+        plt.plot([potential[maxima[0]], potential[maxima[1]]], [current[maxima[0]], current[maxima[1]]], 'k--', label='Ligne entre maxima')
 
 
     plt.xlabel(f'Potentiel ({units["Potential"]})') 
@@ -207,4 +330,9 @@ def plot_current_vs_potential_with_units(df, units):
     plt.title('Tracé Courant vs Potentiel')       
     plt.legend()
     plt.grid(True)
+
+    close_plot_after_delay(5)
     plt.show()
+
+
+    return minima, maxima
