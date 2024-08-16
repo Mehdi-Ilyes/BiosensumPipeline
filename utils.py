@@ -3,12 +3,16 @@ File: utils.py
 Author: BioSensUM 
 Description: Ce fichier contient plusieurs fonctions qui seront utilisées dans le fichier main.py pour analyser les données.
 """
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks, savgol_filter
 import time
 import threading
+import pandas as pd
+
+encodings = ['utf-8', 'iso-8859-1', 'windows-1252']  # List of possible encodings
 
 
 def read_units_from_csv(csv_file):
@@ -22,12 +26,35 @@ def read_units_from_csv(csv_file):
     - dict : Dictionnaire contenant les unités extraites pour chaque colonne.
     """
     try:
-        unit_row = pd.read_csv(csv_file,  skiprows=5, nrows=1, header=None, encoding='utf-16').iloc[0]
-        units = {}
-        units['Potential'] = unit_row[0].split(':')[-1].strip()
-        units['Current'] = unit_row[1].strip()
+        # Essayer plusieurs encodages pour lire le fichier
+        for encoding in encodings:
+            try:
+                # Lire la première ligne (en-têtes) pour extraire les unités
+                print(encoding)
+                df = pd.read_csv(csv_file, encoding=encoding, nrows=1, header=None)
 
-        return units
+                # Imprimer les en-têtes pour débogage
+                print(f"Headers with encoding {encoding}: {df.iloc[0].values}")
+
+                headers = df.iloc[0]
+
+                if len(headers) < 2:
+                    print("Error: The CSV does not have enough columns.")
+                    continue
+
+                # Extraire les unités des en-têtes
+                units = {}
+                units['Potential'] = headers[0].split('[')[-1].replace(']', '').strip()
+                units['Current'] = headers[1].split('[')[-1].replace(']', '').strip()
+
+                return units
+            except (UnicodeDecodeError, pd.errors.ParserError) as e:
+                print(f"Error reading with encoding {encoding}: {e}")
+                continue
+
+        # Si aucun encodage n'a fonctionné, retourner une erreur
+        print(f"Error: Unable to read the file '{csv_file}' with available encodings.")
+        return None
 
     except FileNotFoundError:
         print(f"Error: File '{csv_file}' not found.")
@@ -35,41 +62,43 @@ def read_units_from_csv(csv_file):
     except pd.errors.EmptyDataError:
         print(f"Error: File '{csv_file}' is empty.")
         return None
-    except pd.errors.ParserError as e:
-        print(f"Error parsing CSV file '{csv_file}': {e}")
-        return None
-    
 
 def read_current_from_csv(csv_file):
     """
-    Lis un csv contenant des colonnes Potential et Current et forme un dataframe avec
+    Reads a CSV file containing columns 'Potential' and 'Current' and returns a DataFrame.
 
     Parameters:
-    - csv_file (str): Nom/Lien du fichier csv
+    - csv_file (str): Path to the CSV file.
 
     Returns:
-    - pd.DataFrame: DataFrame contenant le Potential et le courant.
+    - pd.DataFrame: DataFrame containing the 'Potential' and 'Current' columns, or None if an error occurs.
     """
-    try:
-        # Lire le CSV en pd.dataframe
-        df = pd.read_csv(csv_file, skiprows=6, encoding='utf-16', header=None)
-        #'Potential' et 'Current'
-        df.columns = ['Potential', 'Current']
 
-        return df
+    for encoding in encodings:
+        try:
+            # Attempt to read the CSV file with the current encoding
+            print(encoding)
+            df = pd.read_csv(csv_file, skiprows=2, encoding=encoding, header=None, delimiter=';', usecols=[0, 1])
 
-    # Traitement des erreurs
-    except FileNotFoundError:
-        print(f"Error: File '{csv_file}' not found.")
-        return None
-    except pd.errors.EmptyDataError:
-        print(f"Error: File '{csv_file}' is empty.")
-        return None
-    except pd.errors.ParserError as e:
-        print(f"Error parsing CSV file '{csv_file}': {e}")
-        return None
-    
-    
+            # Rename columns
+            df.columns = ['Potential', 'Current']
+
+            return df
+        except UnicodeDecodeError:
+            print(f"UnicodeDecodeError: Could not decode file '{csv_file}' with encoding '{encoding}'.")
+        except pd.errors.EmptyDataError:
+            print(f"Error: File '{csv_file}' is empty.")
+            return None
+        except pd.errors.ParserError as e:
+            print(f"Error parsing CSV file '{csv_file}': {e}")
+            return None
+        except FileNotFoundError:
+            print(f"Error: File '{csv_file}' not found.")
+            return None
+
+    print(f"Error: Unable to read file '{csv_file}' with any of the tried encodings.")
+    return None
+
 
 def clean_data(df):
     """
@@ -88,7 +117,6 @@ def clean_data(df):
 
         # Supprimer les lignes avec des valeurs NaN
         cleaned_df = df.dropna()
-
         return cleaned_df
 
     except Exception as e:
@@ -142,15 +170,12 @@ def filter_peak_by_prominence(df, column='Current', prominence=0.1, m=1):
         else:
             peaks, _ = find_peaks(df[column], prominence=prominence)
 
-        
         # Return the indices of local minimums, or an empty list if none are found
         return peaks.tolist() if len(peaks) > 1 else []
     
     except Exception as e:
         print(f"An error occurred: {e}")
         return []
-    
-
 
 def find_extreme_peaks(df, column='Current', prominence=0.1, m=1):
     """
@@ -324,7 +349,6 @@ def plot_current_vs_potential_with_units(df, units):
     if maxima[0] is not None and maxima[1] is not None:
         plt.plot([potential[maxima[0]], potential[maxima[1]]], [current[maxima[0]], current[maxima[1]]], 'k--', label='Ligne entre maxima')
 
-
     plt.xlabel(f'Potentiel ({units["Potential"]})') 
     plt.ylabel(f'Courant ({units["Current"]})')      
     plt.title('Tracé Courant vs Potentiel')       
@@ -333,6 +357,5 @@ def plot_current_vs_potential_with_units(df, units):
 
     close_plot_after_delay(5)
     plt.show()
-
 
     return minima, maxima

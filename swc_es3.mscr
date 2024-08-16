@@ -8,9 +8,9 @@ set_pgstat_mode 0
 set_pgstat_chan 0
 set_pgstat_mode 2
 set_max_bandwidth 400
-set_range_minmax da -570m -100m
-set_range ba 590u
-set_autoranging ba 59n 590u
+set_range_minmax da -560m -100m
+set_range ba 1152344p
+set_autoranging ba 59n 73750n
 set_e -100m
 cell_on
 meas_loop_swv p c f g -100m -550m 1m 20m 10
@@ -21,5 +21,7 @@ meas_loop_swv p c f g -100m -550m 1m 20m 10
     pck_add g
   pck_end
 endloop
+
 on_finished:
   cell_off
+

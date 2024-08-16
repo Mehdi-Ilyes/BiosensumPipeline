@@ -67,7 +67,7 @@ import matplotlib.pyplot as plt
 # Local imports
 import palmsens.instrument
 import palmsens.mscript
-import palmsens.serial
+import palmsens.palmsens_serial
 
 def SWV_Console():
     pass
@@ -81,7 +81,7 @@ DEVICE_PORT = None
 
 # Location of MethodSCRIPT file to use.
 MSCRIPT_FILE_PATH_ES3 = 'swc_es3.mscr'
-MSCRIPT_FILE_PATH_ESPICO = 'scripts/example_advanced_swv_espico.mscr'
+MSCRIPT_FILE_PATH_ESPICO = 'swc_es3.mscr'
 
 # Location of output files. Directory will be created if it does not exist.
 OUTPUT_PATH = 'output'
@@ -156,16 +156,16 @@ def SWV_Console():
     logging.getLogger('PIL.PngImagePlugin').setLevel(logging.INFO)
 
     # Determine unique name for plot and files.
-    base_name = datetime.datetime.now().strftime('ms_plot_swv_%Y%m%d-%H%M%S')
+    base_name = datetime.datetime.now().strftime('output')
     # Base path contains directory and base name. Extension is appended later.
     base_path = os.path.join(OUTPUT_PATH, base_name)
 
     port = DEVICE_PORT
     if port is None:
-        port = palmsens.serial.auto_detect_port()
+        port = palmsens.palmsens_serial.auto_detect_port()
 
     # Create and open serial connection to the device.
-    with palmsens.serial.Serial(port, 1) as comm:
+    with palmsens.palmsens_serial.Serial(port, 1) as comm:
         device = palmsens.instrument.Instrument(comm)
         device_type = device.get_device_type()
         LOG.info('Connected to %s.', device_type)

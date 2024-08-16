@@ -39,9 +39,10 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import logging
 
 # Third-party imports
-import serial
+import serial as pyserial
 import serial.tools.list_ports
 
+print(pyserial.__file__)
 
 LOG = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ def auto_detect_port():
     """
     LOG.info('Auto-detecting serial communication port.')
     # Get the available ports.
-    ports = serial.tools.list_ports.comports(include_links=False)
+    ports = pyserial.tools.list_ports.comports(include_links=False)
     candidates = []
     for port in ports:
         LOG.debug('Found port: %s', port.description)
@@ -101,7 +102,7 @@ class Serial():
     """Serial communication interface for EmStat Pico."""
 
     def __init__(self, port, timeout):
-        self.connection = serial.Serial(port=None, baudrate=230400, timeout=timeout)
+        self.connection = pyserial.Serial(port=None, baudrate=230400, timeout=timeout)
         self.connection.port = port
 
     def __enter__(self):

@@ -9,7 +9,7 @@ import utils
 import plot_advanced_swv
 
 #Nom du csv(à changer pour output.txt)
-csv_name = "SWV-Grid-Search-10-Hz-10-mV-1.csv"
+csv_name = "output/output.csv"
 
 def main():
     #Faire la SWV(+Reverse SWV) avec comme resultat un output.csv
